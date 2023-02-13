@@ -14,7 +14,21 @@
     <tr>
         <td valign=top>
 
-            {% show_menu %}
+            <div class="header">
+                <ul id="mainmenu" class="mainmenu">
+                    <li class="logo"><a href="{% url 'home' %}">
+                        <div class="logo"></div>
+                    </a></li>
+                    {% for m in menu %}
+                    {% if not forloop.last %}
+                    <li><a href="{% url m.url_name %}">{{m.title}}</a></li>
+                    {% else %}
+                    <li class="last"><a href="{% url m.url_name %}">{{m.title}}</a></li>
+                    {% endif %}
+                    {% endfor %}
+                </ul>
+                <div class="clear"></div>
+            </div>
 
             <table class="table-content" border=0 cellpadding="0" cellspacing="0">
                 <tr>
@@ -27,7 +41,13 @@
                             <li><a href="{% url 'home' %}">Все категории</a></li>
                             {% endif %}
 
-                            {% show_categories '-name' cat_selected %}
+                            {% for c in cats %}
+                            {% if c.pk == cat_selected %}
+                            <li class="selected">{{c.name}}</li>
+                            {% else %}
+                            <li><a href="{{c.get_absolute_url}}">{{c.name}}</a></li>
+                            {% endif %}
+                            {% endfor %}
 
                             <li class="share">
                                 <p>Наш канал</p>
@@ -47,6 +67,15 @@
                         <div class="content-text">
                             {% block content %}
                             {% endblock %}
+                            <nav class="list-pages">
+                                <ul>
+                                {% for p in paginator.page_rage %}
+                                <li class="page-num">
+                                <a href="?page={{ p }}">{{ p }}</a>
+                            </li>
+                                {% endfor %}
+                            </ul>
+                            </nav>
                         </div>
                         <!-- Конец блока контента -->
 

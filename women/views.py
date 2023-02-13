@@ -2,26 +2,28 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.http import HttpResponse, HttpResponseNotFound, Http404
 from django.urls import reverse_lazy
 from django.views.generic import ListView, DetailView, CreateView
-from .forns import AddPostForm
+from django.contrib.auth.mixins import LoginRequiredMixin
+from .forms import AddPostForm
 from .models import *
+from .utils import *
 
 
-class WomenHome(ListView):
+class WomenHome(DataMixin, ListView):
     model = Women
     template_name = 'women/index.html'
     context_object_name = 'posts'
 
     def get_context_data(self, *, object_list=None, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['cat_selected'] = 0
-        context['title'] = 'Главная страница'
+        c_def = self.get_user_context(title="Главная страница")
+        context = dict(list(context.items()) + list(c_def.items()))
         return context
 
     def get_queryset(self):
         return Women.objects.filter(is_published=True)
 
 
-class WomenCategory(ListView):
+class WomenCategory(DataMixin, ListView):
     model = Women
     template_name = 'women/index.html'
     context_object_name = 'posts'
@@ -32,28 +34,36 @@ class WomenCategory(ListView):
 
     def get_context_data(self, *, object_list=None, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['title'] = 'Категория - ' + str(context['posts'][0].cat)
-        context['cat_selected'] = context['posts'][0].cat_id
+        c_def = self.get_user_context(title='Категория - ' + str(context['posts'][0].cat),
+                                      cat_selected=context['posts'][0].cat_id)
+        context = dict(list(context.items()) + list(c_def.items()))
         return context
 
 
-class ShowPost(DetailView):
+class ShowPost(DataMixin, DetailView):
     model = Women
     template_name = 'women/post.html'
     slug_url_kwarg = 'post_slug'
     context_object_name = 'post'
 
-    def get_context_data(self, **kwargs):
+    def get_context_data(self, *, object_list=None, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['title'] = context['post']
+        c_def = self.get_user_context(title=context['post'])
+        context = dict(list(context.items()) + list(c_def.items()))
         return context
 
 
-class AddPage(CreateView):
+class AddPage(LoginRequiredMixin, DataMixin, CreateView):
     form_class = AddPostForm
     template_name = 'women/addpage.html'
     success_url = reverse_lazy('home')
-    extra_context = {'title': 'Добавление статьи'}
+    login_url = '/admin/'
+
+    def get_context_data(self, *, object_list=None, **kwargs):
+        context = super().get_context_data(**kwargs)
+        c_def = self.get_user_context(title="Добавление статьи")
+        context = dict(list(context.items()) + list(c_def.items()))
+        return context
 
 
 def contact(request):
@@ -65,7 +75,16 @@ def login(request):
 
 
 def about(request):
-    return render(request, 'women/about.html', {'title': 'О сайте'})
+    cats = Category.objects.all()
+    menu = [{'title': "О сайте", 'url_name': 'about'},
+            {'title': "Добавить статью", 'url_name': 'add_page'},
+            {'title': "Обратная связь", 'url_name': 'contact'},
+            {'title': "Войти", 'url_name': 'login'}
+            ]
+    user_menu = menu.copy()
+    if not request.user.is_authenticated:
+        user_menu.pop(1)
+    return render(request, 'women/about.html', {'title': 'О сайте', 'cats': cats, 'menu': user_menu})
 
 
 def pageNotFound(request, exception):
